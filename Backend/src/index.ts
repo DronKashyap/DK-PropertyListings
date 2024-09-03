@@ -56,6 +56,41 @@ const signinSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters long' })
 });
 
+
+// Create Listing Schema
+const createListingSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  address: z.string(),
+  regularPrice: z.number(),
+  discountPrice: z.number(),
+  bathrooms: z.number(),
+  bedrooms: z.number(),
+  furnished: z.boolean(),
+  parking: z.boolean(),
+  type: z.string(),
+  offer: z.boolean(),
+  imageUrls: z.array(z.string().url()),
+  userId: z.number(),
+});
+
+// Update Listing Schema
+const updateListingSchema = z.object({
+  id: z.number(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  regularPrice: z.number().optional(),
+  discountPrice: z.number().optional(),
+  bathrooms: z.number().optional(),
+  bedrooms: z.number().optional(),
+  furnished: z.boolean().optional(),
+  parking: z.boolean().optional(),
+  type: z.string().optional(),
+  offer: z.boolean().optional(),
+  imageUrls: z.array(z.string().url()).optional(),
+});
+
 // Your JWT secret
 const JWT_SECRET:any = process.env.JWT_SECRET;
 
@@ -148,6 +183,122 @@ app.post('/signin', async (req: Request, res: Response) => {
       // Handle validation errors
       return res.status(400).json({ message: 'Invalid input', errors: error.errors });
     }
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user details
+app.put('/user', checkLogin, async (req: Request, res: Response) => {
+  try {
+    const { username, email, avatar } = req.body;
+
+    // Validate input using Zod
+    const updateSchema = z.object({
+      username: z.string().min(1).optional(),
+      email: z.string().email().optional(),
+      avatar: z.string().url().optional(),
+    });
+
+    const validatedData = updateSchema.parse(req.body);
+    const userId = parseInt(req.user?.userId as string, 10);
+    // Update the user in the database
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: validatedData,
+    });
+
+    res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      // Handle validation errors
+      return res.status(400).json({ message: 'Invalid input', errors: error.errors });
+    }
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete user
+app.delete('/user', checkLogin, async (req: Request, res: Response) => {
+  try {
+    // Delete the user from the database
+    const userId = parseInt(req.user?.userId as string, 10);
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Signout (invalidate token)
+app.post('/signout', checkLogin, (req: Request, res: Response) => {
+  try {
+    // Invalidate the token on the client side by removing it
+    res.status(200).json({ message: 'Signout successful' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create Listing Route
+app.post('/listing', async (req: Request, res: Response) => {
+  try {
+    const validatedData = createListingSchema.parse(req.body);
+
+    const listing = await prisma.listing.create({
+      data: validatedData,
+    });
+
+    res.status(201).json({ message: 'Listing created successfully', listing });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ message: 'Invalid input', errors: error.errors });
+    }
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Listing Route
+app.put('/listing/:id', async (req: Request, res: Response) => {
+  try {
+    const validatedData = updateListingSchema.parse({
+      id: parseInt(req.params.id, 10),
+      ...req.body,
+    });
+
+    const listing = await prisma.listing.update({
+      where: { id: validatedData.id },
+      data: validatedData,
+    });
+
+    res.status(200).json({ message: 'Listing updated successfully', listing });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ message: 'Invalid input', errors: error.errors });
+    }
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete Listing Route
+app.delete('/listing/:id', async (req: Request, res: Response) => {
+  try {
+    const listingId = parseInt(req.params.id, 10);
+
+    await prisma.listing.delete({
+      where: { id: listingId },
+    });
+
+    res.status(200).json({ message: 'Listing deleted successfully' });
+  } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
