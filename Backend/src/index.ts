@@ -188,6 +188,36 @@ app.post('/signin', async (req: Request, res: Response) => {
   }
 });
 
+
+app.get('/user', checkLogin, async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.user?.userId);
+
+    // Fetch the user's details from the database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatar: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Send the user details as response
+    res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Update user details
 app.put('/user', checkLogin, async (req: Request, res: Response) => {
   try {
@@ -303,6 +333,112 @@ app.delete('/listing/:id', async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+app.get('/listings', async (req: Request, res: Response) => {
+  try {
+    const listings = await prisma.listing.findMany();
+    res.status(200).json({ listings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/my-listings', checkLogin, async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.user?.userId);
+
+    const listings = await prisma.listing.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    res.status(200).json({ listings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.delete('/my-listings/:id', checkLogin, async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { id } = req.params;
+    const listingId = Number(id);
+
+    // Find the listing
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },  // Convert to number
+    });
+
+    // Check if the listing belongs to the logged-in user
+    if (listing?.userId !== userId) {
+      return res.status(403).json({ message: 'You are not authorized to delete this listing' });
+    }
+
+    // Delete the listing
+    await prisma.listing.delete({
+      where: { id: listingId },  // Convert to number
+    });
+
+    res.status(200).json({ message: 'Listing deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/my-listings/:id', checkLogin, async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { id } = req.params;
+    const listingId = Number(id);
+
+    // Find the listing
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },  // Convert to number
+    });
+
+    // Check if the listing belongs to the logged-in user
+    if (listing?.userId !== userId) {
+      return res.status(403).json({ message: 'You are not authorized to update this listing' });
+    }
+
+    // Update the listing
+    const updatedListing = await prisma.listing.update({
+      where: { id: listingId },  // Convert to number
+      data: req.body, // Assuming body contains the updated fields
+    });
+
+    res.status(200).json({ message: 'Listing updated successfully', updatedListing });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/listings/search', async (req: Request, res: Response) => {
+  const { query } = req.query;
+
+  try {
+    const listings = await prisma.listing.findMany({
+      where: {
+        OR: [
+          { name: { contains: query as string, mode: 'insensitive' } },
+          { description: { contains: query as string, mode: 'insensitive' } },
+          { address: { contains: query as string, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    res.status(200).json({ listings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
