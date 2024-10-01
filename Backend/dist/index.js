@@ -17,11 +17,16 @@ const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
+const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 const port = 3000;
 const prisma = new client_1.PrismaClient();
 // Middleware to parse JSON bodies
 app.use(express_1.default.json());
+app.use((0, cors_1.default)({
+    origin: '*',
+    credentials: true,
+}));
 // Middleware function
 const checkLogin = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -161,9 +166,36 @@ app.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(500).json({ message: 'Server error' });
     }
 }));
+app.get('/user', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = Number((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId);
+        // Fetch the user's details from the database
+        const user = yield prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                avatar: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        // Send the user details as response
+        res.status(200).json(user);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}));
 // Update user details
 app.put('/user', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _b;
     try {
         const { username, email, avatar } = req.body;
         // Validate input using Zod
@@ -173,7 +205,7 @@ app.put('/user', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, fun
             avatar: zod_1.z.string().url().optional(),
         });
         const validatedData = updateSchema.parse(req.body);
-        const userId = parseInt((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId, 10);
+        const userId = parseInt((_b = req.user) === null || _b === void 0 ? void 0 : _b.userId, 10);
         // Update the user in the database
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
@@ -192,10 +224,10 @@ app.put('/user', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, fun
 }));
 // Delete user
 app.delete('/user', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _c;
     try {
         // Delete the user from the database
-        const userId = parseInt((_b = req.user) === null || _b === void 0 ? void 0 : _b.userId, 10);
+        const userId = parseInt((_c = req.user) === null || _c === void 0 ? void 0 : _c.userId, 10);
         yield prisma.user.delete({
             where: { id: userId },
         });
@@ -277,9 +309,9 @@ app.get('/listings', (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 }));
 app.get('/my-listings', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c;
+    var _d;
     try {
-        const userId = Number((_c = req.user) === null || _c === void 0 ? void 0 : _c.userId);
+        const userId = Number((_d = req.user) === null || _d === void 0 ? void 0 : _d.userId);
         const listings = yield prisma.listing.findMany({
             where: {
                 userId: userId,
@@ -293,9 +325,9 @@ app.get('/my-listings', checkLogin, (req, res) => __awaiter(void 0, void 0, void
     }
 }));
 app.delete('/my-listings/:id', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
+    var _e;
     try {
-        const userId = Number((_d = req.user) === null || _d === void 0 ? void 0 : _d.userId);
+        const userId = Number((_e = req.user) === null || _e === void 0 ? void 0 : _e.userId);
         const { id } = req.params;
         const listingId = Number(id);
         // Find the listing
@@ -318,9 +350,9 @@ app.delete('/my-listings/:id', checkLogin, (req, res) => __awaiter(void 0, void 
     }
 }));
 app.put('/my-listings/:id', checkLogin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
+    var _f;
     try {
-        const userId = Number((_e = req.user) === null || _e === void 0 ? void 0 : _e.userId);
+        const userId = Number((_f = req.user) === null || _f === void 0 ? void 0 : _f.userId);
         const { id } = req.params;
         const listingId = Number(id);
         // Find the listing
@@ -337,6 +369,25 @@ app.put('/my-listings/:id', checkLogin, (req, res) => __awaiter(void 0, void 0, 
             data: req.body, // Assuming body contains the updated fields
         });
         res.status(200).json({ message: 'Listing updated successfully', updatedListing });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}));
+app.get('/listings/search', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query } = req.query;
+    try {
+        const listings = yield prisma.listing.findMany({
+            where: {
+                OR: [
+                    { name: { contains: query, mode: 'insensitive' } },
+                    { description: { contains: query, mode: 'insensitive' } },
+                    { address: { contains: query, mode: 'insensitive' } },
+                ],
+            },
+        });
+        res.status(200).json({ listings });
     }
     catch (error) {
         console.error(error);
