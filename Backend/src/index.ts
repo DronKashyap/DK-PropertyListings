@@ -3,6 +3,10 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z, ZodError } from 'zod';
+import cors from 'cors';
+
+
+
 
 const app = express();
 const port = 3000;
@@ -10,6 +14,11 @@ const prisma = new PrismaClient();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+app.use(cors({
+  origin: '*', 
+  credentials: true, 
+}));
 
 // Define the type for the JWT payload
 interface JwtPayload {
