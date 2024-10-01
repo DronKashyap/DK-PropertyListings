@@ -23,10 +23,7 @@ const port = 3000;
 const prisma = new client_1.PrismaClient();
 // Middleware to parse JSON bodies
 app.use(express_1.default.json());
-app.use((0, cors_1.default)({
-    origin: '*',
-    credentials: true,
-}));
+app.use((0, cors_1.default)());
 // Middleware function
 const checkLogin = (req, res, next) => {
     const authHeader = req.headers.authorization;

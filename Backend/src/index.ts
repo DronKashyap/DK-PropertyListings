@@ -15,10 +15,7 @@ const prisma = new PrismaClient();
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-app.use(cors({
-  origin: '*', 
-  credentials: true, 
-}));
+app.use(cors());
 
 // Define the type for the JWT payload
 interface JwtPayload {
