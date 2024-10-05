@@ -1,31 +1,28 @@
-import React from 'react';
 import { useRecoilState } from 'recoil';
 import { Link } from 'react-router-dom';
-import { LoginState } from '../Recoil/State';  // Correctly import the atom
+import { LoginState } from '../Recoil/State';  
+import Dropdown from './ui/Dropdown';
 
 function Header() {
-  const [loggedin] = useRecoilState(LoginState);  // Destructure the state value
-
+  const [loggedin] = useRecoilState(LoginState);
+  console.log("appbar re-render")
   return (
-    <div className='flex justify-between bg-slate-300 shadow-lg p-4'>
-      <h1> DK Property Listings</h1>
-      <form>
-        <input type="text" placeholder='Search....' className='border-2 rounded-md border-sky-700 px-2' />
-      </form>
+    <div className='flex justify-between bg-slate-300 shadow-lg p-2'>
+      <h1 className='font-semibold text-red-400'> <span className='font-bold text-slate-500'>DK </span> Property Listings</h1>
       <div className='flex'>
         <Link to='/'>
-          <h3 className='pr-3 cursor-pointer'> Home </h3>
+          <h3 className='pr-3 cursor-pointer mr-4'> Home </h3>
         </Link>
         <Link to='/about'>
           <h3 className='pr-10 cursor-pointer'> About </h3>
         </Link>
+        
         <div className="cursor-pointer">
           {loggedin ? (
-            <h3> Hi! User </h3>
+            <Dropdown />
           ) : (
             <div>
-              <Link to='/signup'> <button className='mr-3 p-1 rounded-md bg-blue-300'>Signup</button></Link>
-              <Link to='/signin'> <button className='pr-3'>SignIn</button></Link>
+              <Link to='/signin'> <button className='pr-  bg-blue-300 hover:scale-110 rounded-xl px-3 font-bold'>SignIn</button></Link>
             </div>
           )}
         </div>
